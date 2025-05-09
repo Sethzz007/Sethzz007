@@ -1,10 +1,11 @@
--- Arquivo: AntiCheatModule (ModuleScript)
 local AntiCheat = {}
 
 function AntiCheat:GetMaxSpeed(player)
     local stats = player:FindFirstChild("leaderstats")
     if stats and stats:FindFirstChild("Level") then
-        return math.clamp(stats.Level.Value, 1, 39)
+        local level = tonumber(stats.Level.Value)
+        if not level then return 16 end
+        return math.clamp(level, 1, 39)
     end
     return 16
 end
@@ -19,9 +20,14 @@ function AntiCheat:IsFlying(char)
     if not root or not humanoid then return false end
 
     if humanoid:GetState() == Enum.HumanoidStateType.Freefall then
+        local region = Region3.new(
+            root.Position - Vector3.new(1, 4, 1),
+            root.Position + Vector3.new(1, 0, 1)
+        )
         local touching = workspace:FindPartsInRegion3WithWhiteList(
-            Region3.new(root.Position - Vector3.new(1, 4, 1), root.Position + Vector3.new(1, 0, 1)),
-            {workspace.Terrain}, 1
+            region, 
+            {workspace.Terrain}, 
+            1
         )
         return #touching == 0
     end
