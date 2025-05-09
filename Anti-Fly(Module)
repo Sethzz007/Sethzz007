@@ -1,0 +1,46 @@
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+
+local lastPositions = {}
+local lastCheck = 0
+
+-- Configurações
+local CHECK_INTERVAL = 1 -- Intervalo de verificação em segundos
+local MAX_DISTANCE = 150 -- Distância máxima permitida em unidades
+local SPEED_TOLERANCE_FACTOR = 2 -- Fator de tolerância para velocidade máxima
+
+-- Remover jogadores desconectados
+Players.PlayerRemoving:Connect(function(player)
+    lastPositions[player] = nil
+end)
+
+-- Verificação de teletransporte
+RunService.Heartbeat:Connect(function(deltaTime)
+    lastCheck = lastCheck + deltaTime
+    if lastCheck >= CHECK_INTERVAL then
+        lastCheck = 0
+        for _, player in ipairs(Players:GetPlayers()) do
+            local char = player.Character
+            if char and char:FindFirstChild("HumanoidRootPart") then
+                local root = char.HumanoidRootPart
+                local humanoid = char:FindFirstChildOfClass("Humanoid")
+
+                if humanoid then
+                    local lastPos = lastPositions[player] or root.Position
+                    local distance = (root.Position - lastPos).Magnitude
+                    local maxAllowedDistance = humanoid.WalkSpeed * CHECK_INTERVAL * SPEED_TOLERANCE_FACTOR
+
+                    if distance > math.max(maxAllowedDistance, MAX_DISTANCE) then
+                        warn(player.Name .. " foi detectado com Teleport Hack.")
+                        warn("Posição Inicial:", lastPos)
+                        warn("Posição Final:", root.Position)
+                        warn("Distância:", distance, "Tempo Decorrido:", CHECK_INTERVAL)
+                        player:Kick("Teleport hack detectado.")
+                    end
+
+                    lastPositions[player] = root.Position
+                end
+            end
+        end
+    end
+end)
