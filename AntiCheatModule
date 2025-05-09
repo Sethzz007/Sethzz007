@@ -11,7 +11,7 @@ function AntiCheat:GetMaxSpeed(player)
 end
 
 function AntiCheat:GetMaxJump()
-    return 50 -- Pode ser personalizado com base em atributos do jogador.
+    return 50
 end
 
 function AntiCheat:IsFlying(char)
@@ -20,18 +20,20 @@ function AntiCheat:IsFlying(char)
     if not root or not humanoid then return false end
 
     if humanoid:GetState() == Enum.HumanoidStateType.Freefall then
-        -- Configurar os parâmetros do Raycast.
         local rayOrigin = root.Position
-        local rayDirection = Vector3.new(0, -5, 0) -- Verificar 5 unidades abaixo do jogador.
-        local raycastParams = RaycastParams.new()
-        raycastParams.FilterDescendantsInstances = {workspace.Terrain} -- Verifica apenas o terreno.
-        raycastParams.FilterType = Enum.RaycastFilterType.Whitelist
+        local rayDirection = Vector3.new(0, -10, 0)
 
-        -- Executar o Raycast.
+        local raycastParams = RaycastParams.new()
+        raycastParams.FilterDescendantsInstances = {workspace}
+        raycastParams.FilterType = Enum.RaycastFilterType.Whitelist
+        raycastParams.IgnoreWater = true
+
         local result = workspace:Raycast(rayOrigin, rayDirection, raycastParams)
 
-        -- Se não houver interseção com o chão, o jogador está voando.
-        return result == nil
+        if not result or (result and result.Distance > 6) then
+            warn(char.Name .. " pode estar voando!")
+            return true
+        end
     end
     return false
 end
