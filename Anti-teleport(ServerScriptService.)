@@ -1,0 +1,56 @@
+--[[ 
+    Anti-Teleporte para Roblox - Server Side
+    Criado por: [Sethzz]
+    Data: 2025-05-10
+    Descrição: Sistema simples que detecta teleporte anormal e avisa, podendo kickar o jogador.
+]]
+
+local Players = game:GetService("Players")
+local TELEPORT_DISTANCE_THRESHOLD = 50 -- distância máxima permitida por "tick" (em studs)
+local CHECK_INTERVAL = 0.5 -- a cada quantos segundos o sistema verifica o player
+
+local function monitorPlayer(player)
+    local character = player.Character or player.CharacterAdded:Wait()
+    local humanoidRoot = character:WaitForChild("HumanoidRootPart")
+    local lastPosition = humanoidRoot.Position
+
+    while player:IsDescendantOf(game) do
+        task.wait(CHECK_INTERVAL)
+
+        if humanoidRoot and humanoidRoot.Parent then
+            local currentPosition = humanoidRoot.Position
+            local distance = (currentPosition - lastPosition).Magnitude
+
+            if distance > TELEPORT_DISTANCE_THRESHOLD then
+                warn("[AntiTeleport] " .. player.Name .. " teleportou " .. math.floor(distance) .. " studs!")
+                
+                -- Opcional: Kicka o jogador
+                -- player:Kick("Teleporte suspeito detectado.")
+            end
+
+            lastPosition = currentPosition
+        else
+            break -- personagem foi removido
+        end
+    end
+end
+
+Players.PlayerAdded:Connect(function(player)
+    player.CharacterAdded:Connect(function()
+        task.wait(1) -- espera carregar personagem
+        monitorPlayer(player)
+    end)
+end)
+
+--Instruções para usar:
+
+1. No Roblox Studio, vá até o Explorer > ServerScriptService.
+
+
+2. Crie um novo Script e cole o código acima.
+
+
+3. Ajuste a variável TELEPORT_DISTANCE_THRESHOLD conforme necessário (quanto maior, menos sensível).
+
+
+4. Opcional: descomente o player:Kick(...) se quiser kickar quem for pego teleportando
