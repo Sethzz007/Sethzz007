@@ -6,35 +6,43 @@
 ]]
 
 local Players = game:GetService("Players")
-local TELEPORT_DISTANCE_THRESHOLD = 50 -- distância máxima permitida por "tick" (em studs)
-local CHECK_INTERVAL = 0.5 -- a cada quantos segundos o sistema verifica o player
+local RunService = game:GetService("RunService")
 
+local TELEPORT_DISTANCE_THRESHOLD = 50 -- distância máxima permitida por "tick" (em studs)
+local CHECK_INTERVAL = 0.5 -- a cada quantos segundos o sistema verifica
+local warnings = {} -- tabela para armazenar avisos por jogador
+
+-- Função para monitorar jogadores
 local function monitorPlayer(player)
     local character = player.Character or player.CharacterAdded:Wait()
     local humanoidRoot = character:WaitForChild("HumanoidRootPart")
     local lastPosition = humanoidRoot.Position
 
-    while player:IsDescendantOf(game) do
+    while player:IsDescendantOf(game) and humanoidRoot.Parent do
         task.wait(CHECK_INTERVAL)
 
-        if humanoidRoot and humanoidRoot.Parent then
-            local currentPosition = humanoidRoot.Position
-            local distance = (currentPosition - lastPosition).Magnitude
+        local currentPosition = humanoidRoot.Position
+        local distance = (currentPosition - lastPosition).Magnitude
 
-            if distance > TELEPORT_DISTANCE_THRESHOLD then
-                warn("[AntiTeleport] " .. player.Name .. " teleportou " .. math.floor(distance) .. " studs!")
-                
-                -- Opcional: Kicka o jogador
-                -- player:Kick("Teleporte suspeito detectado.")
+        if distance > TELEPORT_DISTANCE_THRESHOLD then
+            -- Registra um aviso
+            warnings[player] = (warnings[player] or 0) + 1
+            warn("[AntiTeleport] " .. player.Name .. " teleportou " .. math.floor(distance) .. " studs! Avisos: " .. warnings[player])
+
+            -- Opcional: Kicka o jogador após 3 avisos
+            if warnings[player] >= 3 then
+                player:Kick("Teleporte suspeito detectado (3 avisos).")
             end
-
-            lastPosition = currentPosition
-        else
-            break -- personagem foi removido
         end
+
+        lastPosition = currentPosition
     end
+
+    -- Remove o jogador da tabela de avisos ao desconectar
+    warnings[player] = nil
 end
 
+-- Evento para novos jogadores
 Players.PlayerAdded:Connect(function(player)
     player.CharacterAdded:Connect(function()
         task.wait(1) -- espera carregar personagem
