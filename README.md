@@ -1,40 +1,54 @@
-# Roblox Anti-Cheat System
+🛡️ Sistema Anti-Cheat para Roblox
 
-Um sistema de anti-exploit modular para jogos Roblox. Criado por **Sethzz**
+Um sistema modular de anti-exploit para jogos Roblox, projetado para detectar e prevenir comportamentos suspeitos de jogadores. 
 
-## Recursos
+🚀 Recursos
 
-- Detecta Speed Hack
-- Detecta Jump Hack
-- Detecta Fly Hack
-- Bloqueia abuso de RemoteEvents
-- Fácil de adaptar com base nas regras do seu jogo
+Detecção de Speed Hack
 
-## Estrutura do Projeto
+Detecção de Jump Hack
 
-- `AntiCheatModule` (ModuleScript)
-- `AntiCheatServer` (Script)
-- `RemoteEvent` protegido no ReplicatedStorage
+Detecção de Fly Hack
 
-## Como usar
+Bloqueio de abuso de RemoteEvents
 
-1. Crie os arquivos no `ServerScriptService`:
-   - Um `ModuleScript` chamado `AntiCheatModule`
-   - Um `Script` chamado `AntiCheatServer`
+Fácil adaptação às regras específicas do seu jogo 
 
-2. Crie um `RemoteEvent` no `ReplicatedStorage` com nome `GiveCoins`.
 
-3. Adapte a função `GetMaxSpeed` para refletir o level do seu jogo.
+🧩 Estrutura do Projeto
 
-## Exemplo de Detecção
+AntiCheatModule (ModuleScript)
 
-```lua
+AntiCheatServer (Script)
+
+RemoteEvent protegido no ReplicatedStorage 
+
+
+🛠️ Como Usar
+
+1. Crie os seguintes arquivos no ServerScriptService:
+
+Um ModuleScript chamado AntiCheatModule
+
+Um Script chamado AntiCheatServer
+
+
+
+2. Crie um RemoteEvent no ReplicatedStorage com o nome GiveCoins.
+
+
+3. Adapte a função GetMaxSpeed no módulo para refletir os limites de velocidade do seu jogo. 
+
+
+
+🧪 Exemplo de Detecção
+
 if humanoid.WalkSpeed > maxSpeed + 2 then
     player:Kick("Speed hack detectado.")
 end
-```
 
-## Licença
 
-MIT. Pode usar, modificar e distribuir livremente. Agradeça com uma estrela!
 
+📄 Licença
+
+MIT. Sinta-se à vontade para usar, modificar e distribuir conforme necessário. 
