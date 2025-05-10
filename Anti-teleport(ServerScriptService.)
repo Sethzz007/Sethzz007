@@ -61,4 +61,3 @@ end)
 3. Ajuste a variável TELEPORT_DISTANCE_THRESHOLD conforme necessário (quanto maior, menos sensível).
 
 
-4. Opcional: descomente o player:Kick(...) se quiser kickar quem for pego teleportando
