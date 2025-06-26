@@ -2,19 +2,36 @@ local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 
 local lastPositions = {}
+local lastYPositions = {}
 local lastCheck = 0
 
 -- Configurações
 local CHECK_INTERVAL = 1 -- Intervalo de verificação em segundos
 local MAX_DISTANCE = 150 -- Distância máxima permitida em unidades
 local SPEED_TOLERANCE_FACTOR = 2 -- Fator de tolerância para velocidade máxima
+local MAX_VERTICAL_DISTANCE = 40 -- Máximo de subida permitida por segundo (Anti-Fly)
+local INFRACTION_LIMIT = 3 -- Quantas infrações até kickar o jogador
+
+-- Controle de infrações
+local playerInfractions = {}
 
 -- Remover jogadores desconectados
 Players.PlayerRemoving:Connect(function(player)
-    lastPositions[player] = nil
+    lastPositions[player.UserId] = nil
+    lastYPositions[player.UserId] = nil
+    playerInfractions[player.UserId] = nil
 end)
 
--- Verificação de teletransporte
+-- Função auxiliar para registrar infrações
+local function registerInfraction(player, motivo)
+    playerInfractions[player.UserId] = (playerInfractions[player.UserId] or 0) + 1
+    warn(string.format("%s foi detectado com %s. Infração %d/%d", player.Name, motivo, playerInfractions[player.UserId], INFRACTION_LIMIT))
+    if playerInfractions[player.UserId] >= INFRACTION_LIMIT then
+        player:Kick(motivo .. " (Sistema Anti-Cheat)")
+    end
+end
+
+-- Verificação principal
 RunService.Heartbeat:Connect(function(deltaTime)
     lastCheck = lastCheck + deltaTime
     if lastCheck >= CHECK_INTERVAL then
@@ -26,19 +43,24 @@ RunService.Heartbeat:Connect(function(deltaTime)
                 local humanoid = char:FindFirstChildOfClass("Humanoid")
 
                 if humanoid then
-                    local lastPos = lastPositions[player] or root.Position
+                    -- Anti-Teleport
+                    local lastPos = lastPositions[player.UserId] or root.Position
                     local distance = (root.Position - lastPos).Magnitude
                     local maxAllowedDistance = humanoid.WalkSpeed * CHECK_INTERVAL * SPEED_TOLERANCE_FACTOR
 
                     if distance > math.max(maxAllowedDistance, MAX_DISTANCE) then
-                        warn(player.Name .. " foi detectado com Teleport Hack.")
-                        warn("Posição Inicial:", lastPos)
-                        warn("Posição Final:", root.Position)
-                        warn("Distância:", distance, "Tempo Decorrido:", CHECK_INTERVAL)
-                        player:Kick("Teleport hack detectado.")
+                        registerInfraction(player, "Teleport Hack detectado")
                     end
 
-                    lastPositions[player] = root.Position
+                    lastPositions[player.UserId] = root.Position
+
+                    -- Anti-Fly
+                    local lastY = lastYPositions[player.UserId] or root.Position.Y
+                    local deltaY = math.abs(root.Position.Y - lastY)
+                    if deltaY > MAX_VERTICAL_DISTANCE then
+                        registerInfraction(player, "Fly Hack detectado")
+                    end
+                    lastYPositions[player.UserId] = root.Position.Y
                 end
             end
         end
