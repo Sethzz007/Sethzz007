@@ -2,67 +2,28 @@ local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 
 local lastPositions = {}
-local lastYPositions = {}
-local lastCheck = 0
+local CHECK_INTERVAL = 1 -- segundos
+local MAX_DISTANCE = 100 -- dist. máxima permitida por intervalo
 
--- Configurações
-local CHECK_INTERVAL = 1 -- Intervalo de verificação em segundos
-local MAX_DISTANCE = 150 -- Distância máxima permitida em unidades
-local SPEED_TOLERANCE_FACTOR = 2 -- Fator de tolerância para velocidade máxima
-local MAX_VERTICAL_DISTANCE = 40 -- Máximo de subida permitida por segundo (Anti-Fly)
-local INFRACTION_LIMIT = 3 -- Quantas infrações até kickar o jogador
-
--- Controle de infrações
-local playerInfractions = {}
-
--- Remover jogadores desconectados
+-- Remove dados ao sair
 Players.PlayerRemoving:Connect(function(player)
     lastPositions[player.UserId] = nil
-    lastYPositions[player.UserId] = nil
-    playerInfractions[player.UserId] = nil
 end)
 
--- Função auxiliar para registrar infrações
-local function registerInfraction(player, motivo)
-    playerInfractions[player.UserId] = (playerInfractions[player.UserId] or 0) + 1
-    warn(string.format("%s foi detectado com %s. Infração %d/%d", player.Name, motivo, playerInfractions[player.UserId], INFRACTION_LIMIT))
-    if playerInfractions[player.UserId] >= INFRACTION_LIMIT then
-        player:Kick(motivo .. " (Sistema Anti-Cheat)")
-    end
-end
-
--- Verificação principal
-RunService.Heartbeat:Connect(function(deltaTime)
-    lastCheck = lastCheck + deltaTime
-    if lastCheck >= CHECK_INTERVAL then
-        lastCheck = 0
-        for _, player in ipairs(Players:GetPlayers()) do
-            local char = player.Character
-            if char and char:FindFirstChild("HumanoidRootPart") then
-                local root = char.HumanoidRootPart
-                local humanoid = char:FindFirstChildOfClass("Humanoid")
-
-                if humanoid then
-                    -- Anti-Teleport
-                    local lastPos = lastPositions[player.UserId] or root.Position
-                    local distance = (root.Position - lastPos).Magnitude
-                    local maxAllowedDistance = humanoid.WalkSpeed * CHECK_INTERVAL * SPEED_TOLERANCE_FACTOR
-
-                    if distance > math.max(maxAllowedDistance, MAX_DISTANCE) then
-                        registerInfraction(player, "Teleport Hack detectado")
-                    end
-
-                    lastPositions[player.UserId] = root.Position
-
-                    -- Anti-Fly
-                    local lastY = lastYPositions[player.UserId] or root.Position.Y
-                    local deltaY = math.abs(root.Position.Y - lastY)
-                    if deltaY > MAX_VERTICAL_DISTANCE then
-                        registerInfraction(player, "Fly Hack detectado")
-                    end
-                    lastYPositions[player.UserId] = root.Position.Y
+RunService.Heartbeat:Connect(function(delta)
+    for _, player in ipairs(Players:GetPlayers()) do
+        local char = player.Character
+        if char and char:FindFirstChild("HumanoidRootPart") then
+            local root = char.HumanoidRootPart
+            local lastPos = lastPositions[player.UserId]
+            if lastPos then
+                local distance = (root.Position - lastPos).Magnitude
+                if distance > MAX_DISTANCE then
+                    warn(player.Name .. " foi detectado com teleporte! ("..math.floor(distance).." studs)")
+                    player:Kick("Teleport hack detectado!")
                 end
             end
+            lastPositions[player.UserId] = root.Position
         end
     end
 end)
