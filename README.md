@@ -1,54 +1,96 @@
-🛡️ Sistema Anti-Cheat para Roblox
+Claro! Aqui está uma versão aprimorada das recomendações e do exemplo de README para seu sistema Anti-Cheat para Roblox, totalmente em português:
 
-Um sistema modular de anti-exploit para jogos Roblox, projetado para detectar e prevenir comportamentos suspeitos de jogadores. 
+---
 
-🚀 Recursos
+# 🛡️ Sistema Anti-Cheat para Roblox
 
-Detecção de Speed Hack
+Um sistema modular e adaptável para detectar e bloquear exploits em jogos Roblox. Focado em performance, clareza e fácil personalização.
 
-Detecção de Jump Hack
+---
 
-Detecção de Fly Hack
+## 🚀 Recursos
 
-Bloqueio de abuso de RemoteEvents
+- **Detecção de Speed Hack (velocidade)**
+- **Detecção de Jump Hack (pulo)**
+- **Detecção e prevenção de Fly Hack (voar)**
+- **Bloqueio de abuso de RemoteEvents (ex: GiveCoins)**
+- **Sistema de avisos antes do kick**
+- **Configuração fácil dos limites de tolerância**
+- **Limpeza automática de dados quando o jogador sai**
 
-Fácil adaptação às regras específicas do seu jogo 
+---
 
+## 🧩 Estrutura do Projeto
 
-🧩 Estrutura do Projeto
+- `AntiCheatModule` (ModuleScript): lógica central e limites configuráveis
+- `AntiCheatServer` (Script): faz checagens, kicks e proteção dos RemoteEvents
+- RemoteEvent protegido no `ReplicatedStorage` (exemplo: `GiveCoins`)
 
-AntiCheatModule (ModuleScript)
+---
 
-AntiCheatServer (Script)
+## 🛠️ Como Usar
 
-RemoteEvent protegido no ReplicatedStorage 
+1. **No ServerScriptService:**
+   - Crie um ModuleScript chamado `AntiCheatModule`
+   - Crie um Script chamado `AntiCheatServer`
 
+2. **No ReplicatedStorage:**
+   - Crie um RemoteEvent chamado `GiveCoins`
 
-🛠️ Como Usar
+3. **Configure os limites no módulo:**
+   ```lua
+   local SPEED_TOLERANCE = 2      -- Tolerância extra de velocidade
+   local JUMP_TOLERANCE = 5       -- Tolerância extra de pulo
+   local CHECK_INTERVAL = 1       -- Intervalo de checagem em segundos
+   local REMOTE_MAX_AMOUNT = 100  -- Máximo permitido por RemoteEvent
+   local REMOTE_COOLDOWN = 2      -- Tempo mínimo entre usos do Remote
+   ```
 
-1. Crie os seguintes arquivos no ServerScriptService:
+4. **(Opcional) Ajuste o sistema de avisos:**
+   - Por padrão, o jogador é kickado após 2 advertências.
+   - Para mudar, edite a função `warnAndKick` no `AntiCheatServer`.
 
-Um ModuleScript chamado AntiCheatModule
+---
 
-Um Script chamado AntiCheatServer
+## 🧪 Exemplo de Detecção
 
-
-
-2. Crie um RemoteEvent no ReplicatedStorage com o nome GiveCoins.
-
-
-3. Adapte a função GetMaxSpeed no módulo para refletir os limites de velocidade do seu jogo. 
-
-
-
-🧪 Exemplo de Detecção
-
-if humanoid.WalkSpeed > maxSpeed + 2 then
-    player:Kick("Speed hack detectado.")
+```lua
+if humanoid.WalkSpeed > maxSpeed + SPEED_TOLERANCE then
+    warnAndKick(player, "Speed hack detectado.")
 end
+```
 
+---
 
+## ⚙️ Personalização Avançada
 
-📄 Licença
+- **Adicionar novas detecções:**  
+  Basta criar novas funções no `AntiCheatModule` e chamá-las no loop de checagem do `AntiCheatServer`.
+- **Proteger outros RemoteEvents:**  
+  Copie a lógica de## 🛡️ Boas Práticas
 
-MIT. Sinta-se à vontade para usar, modificar e distribuir conforme necessário. 
+- Sempre valide os dados recebidos do cliente.
+- Nunca confie em RemoteEvents sem validação.
+- Ajuste as tolerâncias para evitar falsos positivos causados por lag.
+
+---
+
+## 📄 Licença
+
+MIT. Use, modifique e distribua à vontade.
+
+---
+
+## 📊 Fluxograma
+
+```
+Jogador entra
+    ↓
+AntiCheat monitora periodicamente
+    ↓
+Detecta comportamento suspeito?
+    → Não: continua monitorando
+    → Sim: adverte e, se necessário, kicka o jogador
+    ↓
+Limpa dados ao sair do jogo
+```
