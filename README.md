@@ -1,4 +1,3 @@
-Claro! Aqui está uma versão aprimorada das recomendações e do exemplo de README para seu sistema Anti-Cheat para Roblox, totalmente em português:
 
 ---
 
