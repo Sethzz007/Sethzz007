@@ -1,17 +1,31 @@
 local AntiCheat = {}
 
+-- Constantes
+local DEFAULT_SPEED = 16
+local MAX_LEVEL = 39
+local MIN_LEVEL = 1
+local SPEED_PER_LEVEL = 0.5  -- Ajuste conforme desejado
+local MAX_JUMP_POWER = 50
+local RAYCAST_DISTANCE = 10
+local FLYING_DISTANCE_THRESHOLD = 6
+local FLYING_MIN_FREEFALL_TIME = 1.5  -- Tempo mínimo em queda para considerar voo
+
+-- Guardar tempo em queda livre dos jogadores
+local freefallTimers = {}
+
 function AntiCheat:GetMaxSpeed(player)
     local stats = player:FindFirstChild("leaderstats")
     if stats and stats:FindFirstChild("Level") then
         local level = tonumber(stats.Level.Value)
-        if not level then return 16 end
-        return math.clamp(level, 1, 39)
+        if not level then return DEFAULT_SPEED end
+        level = math.clamp(level, MIN_LEVEL, MAX_LEVEL)
+        return DEFAULT_SPEED + (level - 1) * SPEED_PER_LEVEL
     end
-    return 16
+    return DEFAULT_SPEED
 end
 
 function AntiCheat:GetMaxJump()
-    return 50
+    return MAX_JUMP_POWER
 end
 
 function AntiCheat:IsFlying(char)
@@ -19,9 +33,19 @@ function AntiCheat:IsFlying(char)
     local humanoid = char:FindFirstChildOfClass("Humanoid")
     if not root or not humanoid then return false end
 
+    local player = game.Players:GetPlayerFromCharacter(char)
+    if not player then return false end
+
     if humanoid:GetState() == Enum.HumanoidStateType.Freefall then
+        -- Iniciar ou atualizar tempo em queda
+        if not freefallTimers[player] then
+            freefallTimers[player] = tick()
+        end
+
+        local elapsed = tick() - freefallTimers[player]
+
         local rayOrigin = root.Position
-        local rayDirection = Vector3.new(0, -10, 0)
+        local rayDirection = Vector3.new(0, -RAYCAST_DISTANCE, 0)
 
         local raycastParams = RaycastParams.new()
         raycastParams.FilterDescendantsInstances = {workspace}
@@ -30,9 +54,14 @@ function AntiCheat:IsFlying(char)
 
         local result = workspace:Raycast(rayOrigin, rayDirection, raycastParams)
 
-        if not result or (result and result.Distance > 6) then
+        if (not result or result.Distance > FLYING_DISTANCE_THRESHOLD) and elapsed > FLYING_MIN_FREEFALL_TIME then
             warn(char.Name .. " pode estar voando!")
             return true
+        end
+    else
+        -- Resetar timer se não estiver em Freefall
+        if freefallTimers[player] then
+            freefallTimers[player] = nil
         end
     end
     return false
