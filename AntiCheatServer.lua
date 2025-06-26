@@ -1,12 +1,35 @@
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local AntiCheat = require(script.Parent:WaitForChild("AntiCheatModule"))
 
-local lastCheck = 0
+-- Constantes
+local CHECK_INTERVAL = 1
+local SPEED_TOLERANCE = 2
+local JUMP_TOLERANCE = 5
+local REMOTE_MAX_AMOUNT = 100
+local REMOTE_COOLDOWN = 2
 
-RunService.Stepped:Connect(function(_, deltaTime)
+-- Tabelas de controle
+local lastCheck = 0
+local warnings = {}
+local remoteCooldowns = {}
+
+-- Função auxiliar para avisos e kicks (com tolerância)
+local function warnAndKick(player, reason)
+    warnings[player] = (warnings[player] or 0) + 1
+    if warnings[player] >= 2 then
+        warn(player.Name .. " foi kickado. Motivo: " .. reason)
+        player:Kick(reason)
+    else
+        warn(player.Name .. " recebeu aviso por: " .. reason)
+    end
+end
+
+-- Checagem periódica de trapaça
+RunService.Heartbeat:Connect(function(deltaTime)
     lastCheck = lastCheck + deltaTime
-    if lastCheck >= 1 then -- Verifica a cada 1 segundo
+    if lastCheck >= CHECK_INTERVAL then
         lastCheck = 0
         for _, player in ipairs(Players:GetPlayers()) do
             local char = player.Character
@@ -14,19 +37,14 @@ RunService.Stepped:Connect(function(_, deltaTime)
                 local humanoid = char:FindFirstChildOfClass("Humanoid")
                 if humanoid then
                     local maxSpeed = AntiCheat:GetMaxSpeed(player)
-                    if humanoid.WalkSpeed > maxSpeed + 2 then
-                        warn(player.Name .. " foi detectado com Speed hack.")
-                        player:Kick("Speed hack detectado.")
+                    if humanoid.WalkSpeed > maxSpeed + SPEED_TOLERANCE then
+                        warnAndKick(player, "Speed hack detectado.")
                     end
-
-                    if humanoid.JumpPower > AntiCheat:GetMaxJump() + 5 then
-                        warn(player.Name .. " foi detectado com Jump hack.")
-                        player:Kick("Jump hack detectado.")
+                    if humanoid.JumpPower > AntiCheat:GetMaxJump() + JUMP_TOLERANCE then
+                        warnAndKick(player, "Jump hack detectado.")
                     end
-
                     if AntiCheat:IsFlying(char) then
-                        warn(player.Name .. " foi detectado com Fly hack.")
-                        player:Kick("Fly detectado.")
+                        warnAndKick(player, "Fly hack detectado.")
                     end
                 end
             end
@@ -34,14 +52,26 @@ RunService.Stepped:Connect(function(_, deltaTime)
     end
 end)
 
-local Remote = game.ReplicatedStorage:WaitForChild("GiveCoins")
+-- Proteção do RemoteEvent
+local Remote = ReplicatedStorage:WaitForChild("GiveCoins")
 
 Remote.OnServerEvent:Connect(function(player, amount)
-    if typeof(amount) ~= "number" or amount > 100 then
-        warn(player.Name .. " tentou abusar do RemoteEvent com valor: " .. tostring(amount))
-        player:Kick("Tentativa de abuso de RemoteEvent.")
+    if typeof(amount) ~= "number" or amount > REMOTE_MAX_AMOUNT then
+        warnAndKick(player, "Tentativa de abuso de RemoteEvent: " .. tostring(amount))
         return
     end
+    local now = tick()
+    remoteCooldowns[player] = remoteCooldowns[player] or 0
+    if now - remoteCooldowns[player] < REMOTE_COOLDOWN then
+        warnAndKick(player, "Spam de RemoteEvent detectado.")
+        return
+    end
+    remoteCooldowns[player] = now
+    -- Código para conceder moedas ao jogador
+end)
 
-    -- Código para conceder moedas ao jogador, se necessário
+-- Limpeza de dados ao sair
+Players.PlayerRemoving:Connect(function(player)
+    warnings[player] = nil
+    remoteCooldowns[player] = nil
 end)
