@@ -1,63 +1,68 @@
---[[ 
-    Anti-Teleporte para Roblox - Server Side
-    Criado por: [Sethzz]
-    Data: 2025-05-10
-    Descrição: Sistema simples que detecta teleporte anormal e avisa, podendo kickar o jogador.
-]]
-
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 
-local TELEPORT_DISTANCE_THRESHOLD = 50 -- distância máxima permitida por "tick" (em studs)
-local CHECK_INTERVAL = 0.5 -- a cada quantos segundos o sistema verifica
-local warnings = {} -- tabela para armazenar avisos por jogador
+local lastPositions = {}
+local lastYPositions = {}
+local lastCheck = 0
 
--- Função para monitorar jogadores
-local function monitorPlayer(player)
-    local character = player.Character or player.CharacterAdded:Wait()
-    local humanoidRoot = character:WaitForChild("HumanoidRootPart")
-    local lastPosition = humanoidRoot.Position
+-- Configurações
+local CHECK_INTERVAL = 1 -- Intervalo de verificação em segundos
+local MAX_DISTANCE = 150 -- Distância máxima permitida em unidades
+local SPEED_TOLERANCE_FACTOR = 2 -- Fator de tolerância para velocidade máxima
+local MAX_VERTICAL_DISTANCE = 40 -- Máximo de subida permitida por segundo (Anti-Fly)
+local INFRACTION_LIMIT = 3 -- Quantas infrações até kickar o jogador
 
-    while player:IsDescendantOf(game) and humanoidRoot.Parent do
-        task.wait(CHECK_INTERVAL)
+-- Controle de infrações
+local playerInfractions = {}
 
-        local currentPosition = humanoidRoot.Position
-        local distance = (currentPosition - lastPosition).Magnitude
-
-        if distance > TELEPORT_DISTANCE_THRESHOLD then
-            -- Registra um aviso
-            warnings[player] = (warnings[player] or 0) + 1
-            warn("[AntiTeleport] " .. player.Name .. " teleportou " .. math.floor(distance) .. " studs! Avisos: " .. warnings[player])
-
-            -- Opcional: Kicka o jogador após 3 avisos
-            if warnings[player] >= 3 then
-                player:Kick("Teleporte suspeito detectado (3 avisos).")
-            end
-        end
-
-        lastPosition = currentPosition
-    end
-
-    -- Remove o jogador da tabela de avisos ao desconectar
-    warnings[player] = nil
-end
-
--- Evento para novos jogadores
-Players.PlayerAdded:Connect(function(player)
-    player.CharacterAdded:Connect(function()
-        task.wait(1) -- espera carregar personagem
-        monitorPlayer(player)
-    end)
+-- Remover jogadores desconectados
+Players.PlayerRemoving:Connect(function(player)
+    lastPositions[player.UserId] = nil
+    lastYPositions[player.UserId] = nil
+    playerInfractions[player.UserId] = nil
 end)
 
---Instruções para usar:
+-- Função auxiliar para registrar infrações
+local function registerInfraction(player, motivo)
+    playerInfractions[player.UserId] = (playerInfractions[player.UserId] or 0) + 1
+    warn(string.format("%s foi detectado com %s. Infração %d/%d", player.Name, motivo, playerInfractions[player.UserId], INFRACTION_LIMIT))
+    if playerInfractions[player.UserId] >= INFRACTION_LIMIT then
+        player:Kick(motivo .. " (Sistema Anti-Cheat)")
+    end
+end
 
-1. No Roblox Studio, vá até o Explorer > ServerScriptService.
+-- Verificação principal
+RunService.Heartbeat:Connect(function(deltaTime)
+    lastCheck = lastCheck + deltaTime
+    if lastCheck >= CHECK_INTERVAL then
+        lastCheck = 0
+        for _, player in ipairs(Players:GetPlayers()) do
+            local char = player.Character
+            if char and char:FindFirstChild("HumanoidRootPart") then
+                local root = char.HumanoidRootPart
+                local humanoid = char:FindFirstChildOfClass("Humanoid")
 
+                if humanoid then
+                    -- Anti-Teleport
+                    local lastPos = lastPositions[player.UserId] or root.Position
+                    local distance = (root.Position - lastPos).Magnitude
+                    local maxAllowedDistance = humanoid.WalkSpeed * CHECK_INTERVAL * SPEED_TOLERANCE_FACTOR
 
-2. Crie um novo Script e cole o código acima.
+                    if distance > math.max(maxAllowedDistance, MAX_DISTANCE) then
+                        registerInfraction(player, "Teleport Hack detectado")
+                    end
 
+                    lastPositions[player.UserId] = root.Position
 
-3. Ajuste a variável TELEPORT_DISTANCE_THRESHOLD conforme necessário (quanto maior, menos sensível).
-
-
+                    -- Anti-Fly
+                    local lastY = lastYPositions[player.UserId] or root.Position.Y
+                    local deltaY = math.abs(root.Position.Y - lastY)
+                    if deltaY > MAX_VERTICAL_DISTANCE then
+                        registerInfraction(player, "Fly Hack detectado")
+                    end
+                    lastYPositions[player.UserId] = root.Position.Y
+                end
+            end
+        end
+    end
+end)
